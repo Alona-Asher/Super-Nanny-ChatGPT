@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from "@chatscope/chat-ui-kit-react"
+import { useState, useMemo } from 'react'
+import { MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react'
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css'
-import './App.css'
+import './ChatBox.css'
+
+const API_KEY = "some key";
+const CHATGPT_SENDER = "ChatGPT";
 
 export const ChatBox = () => {
-    const API_KEY = "ask Alona for the key";
-    const CHATGPT_SENDER = "ChatGPT";
-
     const [typing, setTyping] = useState(false);
     const [messages, setMessages] = useState([
         {
@@ -28,42 +28,51 @@ export const ChatBox = () => {
         const newMessages = [...messages, newMessage];    
         setMessages(newMessages);
         setTyping(true);    
-        await processMsgToChatGPT(newMessages);
+        await processMessageToChatGPT(newMessages);
+        setTyping(false); 
     }
 
-    async function processMsgToChatGPT(chatMessages){
-        let apiMessages = getApiMessages(chatMessages);
+    async function processMessageToChatGPT(chatMessages){
+        const apiMessages = getApiMessagesFromChatMessages(chatMessages);
         const apiRequestBody = {
             "model": "gpt-3.5-turbo",
             "messages": apiMessages
         }
 
-        await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-            "Authorization": "Bearer " + API_KEY,
-            "Content-Type": "application/json"
-            },
-            body: JSON.stringify(apiRequestBody)
-        }).then((data) => { 
-            return data.json();    
-        }).then((data) => {
+        try {
+            await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                "Authorization": "Bearer " + API_KEY,
+                "Content-Type": "application/json"
+                },
+                body: JSON.stringify(apiRequestBody)
+            }).then((data) => { 
+                return data.json();    
+            }).then((data) => {
+                setMessages(
+                [...chatMessages, {
+                    message: data.choices[0].message.content,
+                    sender : CHATGPT_SENDER
+                }, 
+                {
+                    message: "What else would you like to ask me?",
+                    sender: CHATGPT_SENDER
+                }])                
+            });
+        } catch (error) {
+            console.log("There was an error: " + error);
             setMessages(
-            [...chatMessages, {
-                message: data.choices[0].message.content,
-                sender : CHATGPT_SENDER
-            }, 
-            {
-                message: "Anything else you would like to ask me?",
-                sender: CHATGPT_SENDER
-            }])
-            setTyping(false);
-        });
+                [...chatMessages, {
+                    message: "Sorry love, something is wrong. Please contact support for help.",
+                    sender : CHATGPT_SENDER
+                }]);
+        }
     }
 
-    function getApiMessages(chatMessages){
-        let apiMessages = chatMessages.map((messageObj) => {
-            let role = (messageObj.sender === CHATGPT_SENDER) ?
+    function getApiMessagesFromChatMessages(chatMessages){
+        const apiMessages = chatMessages.map((messageObj) => {
+            const role = (messageObj.sender === CHATGPT_SENDER) ?
             "assistant" : "user";
             return { role: role, content: messageObj.message }      
         });
@@ -76,16 +85,16 @@ export const ChatBox = () => {
     }
 
     return (
-        <div style={{ position: "relative", height: "500px", width: "700px"}}>
+        <div className="chatbox-wrapper">       
             <MainContainer>
                 <ChatContainer>
-                <MessageList
-                    scrollBehavior='smooth'
-                    typingIndicator={typing ? <TypingIndicator content="Super Nanny is typing"/> : null}>
-                    {messages.map((message, i) => {
-                    return <Message key={i} model={message} />
-                    })}
-                </MessageList>
+                    <MessageList 
+                        scrollBehavior='smooth'
+                        typingIndicator={typing ? <TypingIndicator content="Super Nanny is typing"/> : null}>
+                        {messages.map((message, i) => {
+                        return <Message key={i} model={message} />
+                        })}
+                    </MessageList>
                 <MessageInput placeholder='Type your question here' onSend={handleSend}/>
                 </ChatContainer>
             </MainContainer>
