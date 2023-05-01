@@ -3,7 +3,7 @@ import { MainContainer, ChatContainer, MessageList, Message, MessageInput, Typin
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css'
 import './ChatBox.css'
 
-const API_KEY = /*"some key"*/"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";
+const API_KEY = "some key";
 const CHATGPT_SENDER = "ChatGPT";
 
 export const ChatBox = () => {
